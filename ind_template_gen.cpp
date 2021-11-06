@@ -41,8 +41,8 @@ struct Record
     SID zone_b;
     SID pref_b;
     SID cg_b;
-    double value;
     Test test;
+    double value;
 };
 
 constexpr unsigned	DIR    = 0;
@@ -57,6 +57,7 @@ constexpr unsigned	CG_A   = 8;
 constexpr unsigned	ZONE_B = 9;
 constexpr unsigned	PREF_B = 10;
 constexpr unsigned	CG_B   = 11;
+constexpr unsigned 	TEST_A_NMB = 12;
 
 // dir
 // dir, pbx
@@ -71,13 +72,14 @@ using RecordKey = std::array<SID, FIELDS_COUNT>;
 using RecordsMap = std::multimap<RecordKey, Record>;
 
 //using PtrToField = SID Record::*;
-using PtrToField = std::function<SID()>;
+using PtrToField = std::function<SID (Record const&)>;
 using FieldsOfKey = std::array<PtrToField, FIELDS_COUNT>;
 using KeyCombinations = std::vector<FieldsOfKey>;
 
 KeyCombinations all_subsets_of_field_index;
+PtrToField tt = [](Record const& r) { return r.test.a_nmb; };
 
-constexpr FieldsOfKey fields
+const FieldsOfKey fields
 {
     &Record::dir,		// 0
     &Record::pbx_a,		// 1
@@ -90,8 +92,8 @@ constexpr FieldsOfKey fields
     &Record::cg_a,		// 8
     &Record::zone_b,		// 9
     &Record::pref_b,		// 10
-    &Record::cg_b		// 11
-    //&Record::test.a_nmb
+    &Record::cg_b,		// 11
+    tt
 };
 
 struct Query
@@ -108,12 +110,12 @@ readRecords()
 {
     return
 	{
-	    { 1, 20, 30, 22, 32, 43, 51, 62, 73, 51, 63, 74, 1.0 },
-	    { 4, 25, 36, 22, 32, 43, 51, 62, 73, 51, 63, 74, 1.0 },
-	    { 7, 28, 39, 22, 32, 43, 51, 62, 73, 51, 63, 74, 1.0 },
-	    { 1, 25, 36, 22, 32, 43, 51, 62, 73, 51, 63, 74, 11.0 },
-	    { 1, 21, 30, 22, 32, 43, 51, 62, 73, 51, 63, 74, 1.0 },
-	    { 1, 21, 30, 22, 32, 43, 51, 62, 73, 51, 63, 74, 100.0 }
+	    { 1, 20, 30, 22, 32, 43, 51, 62, 73, 51, 63, 74, {200, 0}, 1.0 },
+	    { 4, 25, 36, 22, 32, 43, 51, 62, 73, 51, 63, 74, {200, 0}, 1.0 },
+	    { 7, 28, 39, 22, 32, 43, 51, 62, 73, 51, 63, 74, {200, 0}, 1.0 },
+	    { 1, 25, 36, 22, 32, 43, 51, 62, 73, 51, 63, 74, {200, 0}, 11.0 },
+	    { 1, 21, 30, 22, 32, 43, 51, 62, 73, 51, 63, 74, {200, 0}, 1.0 },
+	    { 1, 21, 30, 22, 32, 43, 51, 62, 73, 51, 63, 74, {200, 0}, 100.0 }
 	};
 }
 
@@ -130,12 +132,13 @@ operator << (std::ostream& o, const Record k)
     o << k.dir << " " << k.pbx_a << " " << k.oper_a << " "
       << k.pbx_b << " " << k.oper_b << " " << k.tg << " "
       << k.zone_a << " " << k.pref_a << " " << k.cg_a << " "
-      << k.zone_b << " " << k.pref_b << " " << k.cg_b
+      << k.zone_b << " " << k.pref_b << " " << k.cg_b << " {"
+      << k.test.a_nmb << ", " << k.test.b_nmb << "}"
       << " = " << k.value;
     return o;
 }
 
-constexpr unsigned QUERY_KEYS_COUNT = 3;
+constexpr unsigned QUERY_KEYS_COUNT = 2;
 
 int
 main()
@@ -165,7 +168,7 @@ main()
 	{
 	    RecordKey key;
 	    std::transform(fld_combo.begin(), fld_combo.end(), key.begin(),
-			   [&r](const PtrToField& f) { return (f != nullptr) ? r.*f : 0; });
+			   [&r](const PtrToField& f) { return (f != nullptr) ? f(r) : 0; });
 
 	    n_em.insert(std::pair<RecordKey, const Record&>( {key, r} ));
 	}
